@@ -3,114 +3,85 @@ package org.nemwiz.jiracommitmessage.services
 import com.intellij.notification.BrowseNotificationAction
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.project.Project
 import org.nemwiz.jiracommitmessage.configuration.PluginSettingsState
 import org.nemwiz.jiracommitmessage.provider.PluginNotifier
-import java.util.*
+import java.util.Locale
 import java.util.regex.Pattern
 
 private val LOG = logger<JiraCommitMessagePlugin>()
 
 private const val DEFAULT_REGEX_FOR_JIRA_PROJECT_ISSUES = "([A-Z]+[_-][0-9]+)"
-private const val CONVENTIONAL_COMMITS_REGEX = "(feat|fix|build|ci|chore|docs|perf|refactor|style|test)*"
 
 @Service(Service.Level.PROJECT)
 class JiraCommitMessagePlugin(private val project: Project) : Disposable {
 
-    fun getCommitMessageFromBranchName(branchName: String?): String {
+    fun getCommitMessage(): String {
+        val state = PluginSettingsState.instance.state
+        val configuredIssue = state.jiraIssueKey.trim()
 
-        LOG.info("Extracting JIRA project key from branch name -> $branchName")
-
-        if (branchName == null) {
-            return ""
+        if (configuredIssue.isNotEmpty()) {
+            return buildCommitMessage(configuredIssue.uppercase(Locale.getDefault()))
         }
 
-        val jiraProjectKeys = PluginSettingsState.instance.state.jiraProjectKeys
-        val isAutoDetectProjectKey = PluginSettingsState.instance.state.isAutoDetectJiraProjectKey
-
-        LOG.info("JIRA Commit message plugin settings: jiraProjectKeys -> $jiraProjectKeys, isAutoDetectProjectKey -> $isAutoDetectProjectKey")
-
-        if (!isAutoDetectProjectKey && jiraProjectKeys.isEmpty()) {
-            val notifier = PluginNotifier()
-            notifier.showWarning(
+        if (state.jiraProjectKeys.isEmpty() && !state.isAutoDetectJiraProjectKey) {
+            PluginNotifier().showWarning(
                 project,
                 "Missing configuration",
-                "Please configure your JIRA project key under Settings > Tools > JIRA Id Commit Message",
+                "Configure a JIRA issue key under Settings > Tools > JIRA SVN Commit Message",
                 BrowseNotificationAction(
-                    "Visit documentation",
-                    "https://github.com/nemwiz/jira-commit-message-intellij-plugin"
+                    "Open repository",
+                    "https://github.com/toshaTikhonov/jira-commit-message-intellij-plugin"
                 )
             )
-
             return ""
         }
 
-        val isConventionalCommit = PluginSettingsState.instance.state.isConventionalCommit
+        return ""
+    }
 
-        val jiraIssue = extractJiraIssueFromBranch(isAutoDetectProjectKey, branchName, jiraProjectKeys)
-        val conventionalCommitType = extractConventionalCommitType(isConventionalCommit, branchName)
+    fun getCommitMessageFromText(text: String?): String {
+        if (text.isNullOrBlank()) return getCommitMessage()
 
-        LOG.info("Extracted JIRA issue -> $jiraIssue, conventionalCommitType -> $conventionalCommitType")
+        val state = PluginSettingsState.instance.state
+        val jiraIssue = extractJiraIssue(state.isAutoDetectJiraProjectKey, text, state.jiraProjectKeys)
+            ?: state.jiraIssueKey.trim().takeIf { it.isNotEmpty() }
 
-        val selectedMessageWrapper = PluginSettingsState.instance.state.messageWrapperType
-        val selectedPrefixType = PluginSettingsState.instance.state.messagePrefixType
-        val selectedInfixType = PluginSettingsState.instance.state.messageInfixType
+        return jiraIssue?.let { buildCommitMessage(it.uppercase(Locale.getDefault())) }.orEmpty()
+    }
 
-        LOG.info("JIRA Commit message wrapper settings: selectedMessageWrapper -> $selectedMessageWrapper, selectedPrefixType -> $selectedPrefixType, selectedInfixType -> $selectedInfixType")
-
+    private fun buildCommitMessage(jiraIssue: String): String {
+        val state = PluginSettingsState.instance.state
         return CommitMessageBuilder(jiraIssue)
-            .withWrapper(selectedMessageWrapper)
-            .withInfix(selectedInfixType)
-            .withConventionalCommit(conventionalCommitType)
-            .withPrefix(selectedPrefixType)
+            .withWrapper(state.messageWrapperType)
+            .withInfix(state.messageInfixType)
+            .withPrefix(state.messagePrefixType)
             .getCommitMessage()
     }
 
-    private fun extractJiraIssueFromBranch(
+    private fun extractJiraIssue(
         isAutoDetectProjectKey: Boolean,
-        branchName: String,
+        source: String,
         jiraProjectKeys: List<String>
     ): String? {
-
-        var jiraIssue: String? = null
-
         if (isAutoDetectProjectKey) {
-            val pattern = Pattern.compile(DEFAULT_REGEX_FOR_JIRA_PROJECT_ISSUES).toRegex()
-            val matchedJiraIssue = pattern.find(branchName)
-            jiraIssue = matchedJiraIssue?.value
-        } else {
-            for (projectKey in jiraProjectKeys) {
-                val pattern = createPatternRegex(projectKey)
-                var matchedJiraIssue = pattern.find(branchName)
-
-                if (matchedJiraIssue == null) {
-                    val lowercasePattern = createPatternRegex(projectKey.lowercase())
-                    matchedJiraIssue = lowercasePattern.find(branchName)
-                }
-
-                if (matchedJiraIssue != null) {
-                    jiraIssue = matchedJiraIssue.value.uppercase()
-                    break
-                }
-            }
+            return Pattern.compile(DEFAULT_REGEX_FOR_JIRA_PROJECT_ISSUES)
+                .toRegex()
+                .find(source)
+                ?.value
         }
 
-        return jiraIssue
-    }
+        for (projectKey in jiraProjectKeys) {
+            val pattern = Pattern.compile(String.format(Locale.US, "%s+[_-][0-9]+", projectKey)).toRegex()
+            val match = pattern.find(source)
+                ?: Pattern.compile(String.format(Locale.US, "%s+[_-][0-9]+", projectKey.lowercase())).toRegex().find(source)
 
-    private fun createPatternRegex(projectKey: String) =
-        Pattern.compile(String.format(Locale.US, "%s+[_-][0-9]+", projectKey)).toRegex()
-
-    private fun extractConventionalCommitType(isConventionalCommit: Boolean, branchName: String): String? {
-        if (isConventionalCommit) {
-            val pattern = Pattern.compile(CONVENTIONAL_COMMITS_REGEX).toRegex()
-            val matchedConventionalType = pattern.find(branchName)
-            return matchedConventionalType?.value
+            if (match != null) return match.value.uppercase(Locale.getDefault())
         }
+
         return null
     }
 
-    override fun dispose() {
-    }
+    override fun dispose() = Unit
 }

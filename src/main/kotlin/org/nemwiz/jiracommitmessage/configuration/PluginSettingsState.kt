@@ -27,14 +27,18 @@ class PluginSettingsState : PersistentStateComponent<PluginSettingsState.PluginS
         var messagePrefixType = PrefixType.NO_PREFIX.type
         var messageInfixType = InfixType.NO_INFIX.type
         var isPrependJiraIssueOnActionClick = false
-        var isAutoDetectJiraProjectKey = false
+        var isAutoDetectJiraProjectKey = true
         var isConventionalCommit = false
-        var jiraProjectKeys = emptyList<String>()
+        var jiraProjectKeys = listOf("FAREPLUS")
 
         var jiraIssueKey = ""
         var jiraBaseUrl = "https://jira.srvrg.com"
         var jiraUser = "tikhonov"
         var jiraCertificatePath = ""
+        var jiraVerifyTls = true
+        var jiraJql = "assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC"
+        var publishSvnRevisionToJira = true
+
         var svnRepositoryUrl = "https://svn.srvrg.com/svn/PaySys"
         var svnUsername = "tikhonov"
     }

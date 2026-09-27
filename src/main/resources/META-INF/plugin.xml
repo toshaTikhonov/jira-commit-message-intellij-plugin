@@ -1,24 +1,21 @@
 <idea-plugin>
     <id>org.nemwiz.jira-commit-message</id>
-    <name>JIRA id commit message</name>
-    <vendor>nemwiz</vendor>
+    <name>JIRA id SVN commit message</name>
+    <vendor>toshaTikhonov</vendor>
 
-    <!-- Product and plugin compatibility requirements -->
-    <!-- https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
-    <depends>Git4Idea</depends>
+    <depends>Subversion</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="org.nemwiz.jiracommitmessage.configuration.PluginSettingsState"/>
 
         <applicationConfigurable groupId="tools"
-                             displayName="JIRA Id Commit Message"
+                             displayName="JIRA SVN Commit Message"
                              id="preference.action.PluginActionConfiguration"
                              nonDefaultProject="true"
                              instance="org.nemwiz.jiracommitmessage.configuration.PluginSettingsConfiguration"/>
 
         <vcs.commitMessageProvider implementation="org.nemwiz.jiracommitmessage.provider.PluginProvider"/>
-        <checkinHandlerFactory implementation="org.nemwiz.jiracommitmessage.handler.BranchCheckoutHandler"/>
 
         <notificationGroup id="JIRA Id Commit Message Notification Group"
                      displayType="BALLOON"
@@ -26,11 +23,10 @@
     </extensions>
 
     <actions>
-        <!-- Add your actions here -->
         <action id="action.PluginAction"
                 class="org.nemwiz.jiracommitmessage.action.PluginAction"
-                text="JIRA Id Commit Message Action"
-                description="Action for inserting JIRA id from branch name into commit message"
+                text="JIRA SVN Commit Message"
+                description="Insert JIRA issue id into an SVN commit message"
                 icon="/icons/frog.png">
             <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
         </action>

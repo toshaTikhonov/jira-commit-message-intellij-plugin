@@ -6,14 +6,19 @@ import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-private const val JIRA_PROJECT_KEYS_LABEL = 12
-private const val JIRA_PROJECT_KEYS_LIST = 13
-
 class PluginSettingsConfigurationPanel {
+
+    val jiraIssueKeyField = JBTextField()
+    val jiraBaseUrlField = JBTextField()
+    val jiraUserField = JBTextField()
+    val jiraCertificatePathField = JBTextField()
+    val svnRepositoryUrlField = JBTextField()
+    val svnUsernameField = JBTextField()
 
     var mainPanel: JPanel
     var messageWrapperTypeDropdown: ComboBox<String> = ComboBox()
@@ -49,29 +54,28 @@ class PluginSettingsConfigurationPanel {
         infixTypeDropdown.addItem(InfixType.COLON.type)
         infixTypeDropdown.addItem(InfixType.COLON_SPACE.type)
 
-        projectKeysModel = CollectionListModel<String>(projectKeys)
+        projectKeysModel = CollectionListModel(projectKeys)
         projectKeysList = JBList(projectKeysModel)
         projectKeysList.setEmptyText("No project keys configured")
 
-        isAutoDetectJiraProjectKeyCheckbox.addChangeListener {
-            run {
-                val isSelected = (it.source as JBCheckBox).isSelected
-                mainPanel.getComponent(JIRA_PROJECT_KEYS_LABEL).isVisible = !isSelected
-                mainPanel.getComponent(JIRA_PROJECT_KEYS_LIST).isVisible = !isSelected
-            }
-        }
-
         toolbar = ToolbarDecorator.createDecorator(projectKeysList).disableUpDownActions()
         toolbar.setAddAction {
-            run {
-                val addProjectKeyDialog = AddProjectKeyDialog()
-                if (addProjectKeyDialog.showAndGet()) {
-                    projectKeysModel.add(addProjectKeyDialog.addProjectKeyField.text)
-                }
+            val addProjectKeyDialog = AddProjectKeyDialog()
+            if (addProjectKeyDialog.showAndGet()) {
+                projectKeysModel.add(addProjectKeyDialog.addProjectKeyField.text)
             }
         }
 
         mainPanel = FormBuilder.createFormBuilder()
+            .addSeparator()
+            .addLabeledComponent(JBLabel("Current JIRA issue"), jiraIssueKeyField, 1, false)
+            .addLabeledComponent(JBLabel("JIRA URL"), jiraBaseUrlField, 1, false)
+            .addLabeledComponent(JBLabel("JIRA user"), jiraUserField, 1, false)
+            .addLabeledComponent(JBLabel("JIRA client certificate (.p12)"), jiraCertificatePathField, 1, false)
+            .addSeparator()
+            .addLabeledComponent(JBLabel("SVN repository URL"), svnRepositoryUrlField, 1, false)
+            .addLabeledComponent(JBLabel("SVN username"), svnUsernameField, 1, false)
+            .addSeparator()
             .addLabeledComponent(JBLabel("Commit message bracket/wrapper type"), messageWrapperTypeDropdown, 1, false)
             .addLabeledComponent(JBLabel("Commit message prefix"), prefixTypeDropdown, 1, false)
             .addLabeledComponent(JBLabel("Commit message infix"), infixTypeDropdown, 1, false)
@@ -82,13 +86,7 @@ class PluginSettingsConfigurationPanel {
                 false
             )
             .addLabeledComponent(
-                JBLabel("Automatically detect conventional commits"),
-                isConventionalCommitCheckbox,
-                1,
-                false
-            )
-            .addLabeledComponent(
-                JBLabel("Automatically detect JIRA project key"),
+                JBLabel("Automatically detect JIRA project key from text"),
                 isAutoDetectJiraProjectKeyCheckbox,
                 1,
                 false
@@ -98,7 +96,5 @@ class PluginSettingsConfigurationPanel {
             .panel
     }
 
-    fun getPreferredFocusedComponent(): JComponent {
-        return messageWrapperTypeDropdown
-    }
+    fun getPreferredFocusedComponent(): JComponent = jiraIssueKeyField
 }

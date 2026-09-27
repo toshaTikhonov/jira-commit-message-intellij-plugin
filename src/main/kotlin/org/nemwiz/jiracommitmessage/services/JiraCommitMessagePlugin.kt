@@ -60,7 +60,7 @@ class JiraCommitMessagePlugin(private val project: Project) : Disposable {
             .getCommitMessage()
     }
 
-    private fun extractJiraIssue(
+    fun extractIssueKey(source: String): String? {\n        val state = PluginSettingsState.instance.state\n        return extractJiraIssue(state.isAutoDetectJiraProjectKey, source, state.jiraProjectKeys)\n    }\n\n    private fun extractJiraIssue(
         isAutoDetectProjectKey: Boolean,
         source: String,
         jiraProjectKeys: List<String>

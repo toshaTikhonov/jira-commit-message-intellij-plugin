@@ -36,9 +36,9 @@ class PluginSettingsConfigurationPanel {
     private var toolbar: ToolbarDecorator
 
     init {
-        MessageWrapperType.entries.forEach { messageWrapperTypeDropdown.addItem(it.type) }
-        PrefixType.entries.forEach { prefixTypeDropdown.addItem(it.type) }
-        InfixType.entries.forEach { infixTypeDropdown.addItem(it.type) }
+        MessageWrapperType.values().forEach { messageWrapperTypeDropdown.addItem(it.type) }
+        PrefixType.values().forEach { prefixTypeDropdown.addItem(it.type) }
+        InfixType.values().forEach { infixTypeDropdown.addItem(it.type) }
 
         projectKeysModel = CollectionListModel(PluginSettingsState.instance.state.jiraProjectKeys)
         projectKeysList = JBList(projectKeysModel)

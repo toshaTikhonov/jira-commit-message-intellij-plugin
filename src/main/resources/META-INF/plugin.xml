@@ -15,7 +15,7 @@
                              nonDefaultProject="true"
                              instance="org.nemwiz.jiracommitmessage.configuration.PluginSettingsConfiguration"/>
 
-        <vcs.commitMessageProvider implementation="org.nemwiz.jiracommitmessage.provider.PluginProvider"/>
+        <vcs.commitMessageProvider implementation="org.nemwiz.jiracommitmessage.provider.PluginProvider"/>\n        <checkinHandlerFactory implementation="org.nemwiz.jiracommitmessage.handler.SvnJiraCheckinHandlerFactory"/>
 
         <notificationGroup id="JIRA Id Commit Message Notification Group"
                      displayType="BALLOON"

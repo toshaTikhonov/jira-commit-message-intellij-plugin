@@ -6,76 +6,61 @@ import javax.swing.JComponent
 
 class PluginSettingsConfiguration : Configurable {
 
-    private lateinit var pluginSettingsConfigurationPanel: PluginSettingsConfigurationPanel
-    private val pluginSettingsState
-        get() = PluginSettingsState.instance.state
+    private lateinit var panel: PluginSettingsConfigurationPanel
+    private val state get() = PluginSettingsState.instance.state
 
     override fun createComponent(): JComponent {
-        pluginSettingsConfigurationPanel = PluginSettingsConfigurationPanel()
-        return pluginSettingsConfigurationPanel.mainPanel
+        panel = PluginSettingsConfigurationPanel()
+        reset()
+        return panel.mainPanel
     }
 
-    override fun isModified(): Boolean {
-        return pluginSettingsConfigurationPanel
-            .messageWrapperTypeDropdown.selectedItem != pluginSettingsState.messageWrapperType ||
-            pluginSettingsConfigurationPanel.prefixTypeDropdown.selectedItem != pluginSettingsState.messagePrefixType ||
-            pluginSettingsConfigurationPanel.infixTypeDropdown.selectedItem != pluginSettingsState.messageInfixType ||
-            pluginSettingsConfigurationPanel.prependJiraIssueOnPluginActionClickCheckbox.isSelected != pluginSettingsState.isPrependJiraIssueOnActionClick ||
-            pluginSettingsConfigurationPanel.isConventionalCommitCheckbox.isSelected != pluginSettingsState.isConventionalCommit ||
-            pluginSettingsConfigurationPanel.isAutoDetectJiraProjectKeyCheckbox.isSelected != pluginSettingsState.isAutoDetectJiraProjectKey ||
-            setOf(pluginSettingsConfigurationPanel.projectKeysModel.items) != setOf(pluginSettingsState.jiraProjectKeys)
-    }
+    override fun isModified(): Boolean =
+        panel.jiraIssueKeyField.text != state.jiraIssueKey ||
+            panel.jiraBaseUrlField.text != state.jiraBaseUrl ||
+            panel.jiraUserField.text != state.jiraUser ||
+            panel.jiraCertificatePathField.text != state.jiraCertificatePath ||
+            panel.svnRepositoryUrlField.text != state.svnRepositoryUrl ||
+            panel.svnUsernameField.text != state.svnUsername ||
+            panel.messageWrapperTypeDropdown.selectedItem != state.messageWrapperType ||
+            panel.prefixTypeDropdown.selectedItem != state.messagePrefixType ||
+            panel.infixTypeDropdown.selectedItem != state.messageInfixType ||
+            panel.prependJiraIssueOnPluginActionClickCheckbox.isSelected != state.isPrependJiraIssueOnActionClick ||
+            panel.isAutoDetectJiraProjectKeyCheckbox.isSelected != state.isAutoDetectJiraProjectKey ||
+            setOf(panel.projectKeysModel.items) != setOf(state.jiraProjectKeys)
 
     override fun apply() {
-        pluginSettingsState.messageWrapperType = pluginSettingsConfigurationPanel
-            .messageWrapperTypeDropdown
-            .selectedItem
-            .toString()
-        pluginSettingsState.messagePrefixType = pluginSettingsConfigurationPanel
-            .prefixTypeDropdown
-            .selectedItem
-            .toString()
-        pluginSettingsState.messageInfixType = pluginSettingsConfigurationPanel
-            .infixTypeDropdown
-            .selectedItem
-            .toString()
-        pluginSettingsState.isPrependJiraIssueOnActionClick =
-            pluginSettingsConfigurationPanel.prependJiraIssueOnPluginActionClickCheckbox.isSelected
-        pluginSettingsState.isConventionalCommit =
-            pluginSettingsConfigurationPanel.isConventionalCommitCheckbox.isSelected
-        pluginSettingsState.isAutoDetectJiraProjectKey =
-            pluginSettingsConfigurationPanel.isAutoDetectJiraProjectKeyCheckbox.isSelected
-        pluginSettingsState.jiraProjectKeys = pluginSettingsConfigurationPanel.projectKeysModel.items
+        state.jiraIssueKey = panel.jiraIssueKeyField.text.trim()
+        state.jiraBaseUrl = panel.jiraBaseUrlField.text.trim()
+        state.jiraUser = panel.jiraUserField.text.trim()
+        state.jiraCertificatePath = panel.jiraCertificatePathField.text.trim()
+        state.svnRepositoryUrl = panel.svnRepositoryUrlField.text.trim()
+        state.svnUsername = panel.svnUsernameField.text.trim()
+        state.messageWrapperType = panel.messageWrapperTypeDropdown.selectedItem.toString()
+        state.messagePrefixType = panel.prefixTypeDropdown.selectedItem.toString()
+        state.messageInfixType = panel.infixTypeDropdown.selectedItem.toString()
+        state.isPrependJiraIssueOnActionClick = panel.prependJiraIssueOnPluginActionClickCheckbox.isSelected
+        state.isAutoDetectJiraProjectKey = panel.isAutoDetectJiraProjectKeyCheckbox.isSelected
+        state.jiraProjectKeys = panel.projectKeysModel.items
     }
 
-    override fun getDisplayName(): String {
-        return "JIRA Id Commit Message"
-    }
+    override fun getDisplayName(): String = "JIRA SVN Commit Message"
 
-    override fun getPreferredFocusedComponent(): JComponent {
-        return pluginSettingsConfigurationPanel.getPreferredFocusedComponent()
-    }
+    override fun getPreferredFocusedComponent(): JComponent = panel.getPreferredFocusedComponent()
 
     override fun reset() {
-        pluginSettingsConfigurationPanel
-            .messageWrapperTypeDropdown
-            .selectedItem = pluginSettingsState.messageWrapperType
-        pluginSettingsConfigurationPanel
-            .prefixTypeDropdown
-            .selectedItem = pluginSettingsState.messagePrefixType
-        pluginSettingsConfigurationPanel
-            .infixTypeDropdown
-            .selectedItem = pluginSettingsState.messageInfixType
-        pluginSettingsConfigurationPanel
-            .prependJiraIssueOnPluginActionClickCheckbox
-            .isSelected = pluginSettingsState.isPrependJiraIssueOnActionClick
-        pluginSettingsConfigurationPanel
-            .isConventionalCommitCheckbox
-            .isSelected = pluginSettingsState.isConventionalCommit
-        pluginSettingsConfigurationPanel
-            .isAutoDetectJiraProjectKeyCheckbox
-            .isSelected = pluginSettingsState.isAutoDetectJiraProjectKey
-        pluginSettingsConfigurationPanel.projectKeysModel = CollectionListModel(pluginSettingsState.jiraProjectKeys)
-        pluginSettingsConfigurationPanel.projectKeysList.model = pluginSettingsConfigurationPanel.projectKeysModel
+        panel.jiraIssueKeyField.text = state.jiraIssueKey
+        panel.jiraBaseUrlField.text = state.jiraBaseUrl
+        panel.jiraUserField.text = state.jiraUser
+        panel.jiraCertificatePathField.text = state.jiraCertificatePath
+        panel.svnRepositoryUrlField.text = state.svnRepositoryUrl
+        panel.svnUsernameField.text = state.svnUsername
+        panel.messageWrapperTypeDropdown.selectedItem = state.messageWrapperType
+        panel.prefixTypeDropdown.selectedItem = state.messagePrefixType
+        panel.infixTypeDropdown.selectedItem = state.messageInfixType
+        panel.prependJiraIssueOnPluginActionClickCheckbox.isSelected = state.isPrependJiraIssueOnActionClick
+        panel.isAutoDetectJiraProjectKeyCheckbox.isSelected = state.isAutoDetectJiraProjectKey
+        panel.projectKeysModel = CollectionListModel(state.jiraProjectKeys)
+        panel.projectKeysList.model = panel.projectKeysModel
     }
 }

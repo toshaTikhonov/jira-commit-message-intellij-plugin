@@ -11,9 +11,7 @@ class PluginSettingsState : PersistentStateComponent<PluginSettingsState.PluginS
 
     var pluginState: PluginState = PluginState()
 
-    override fun getState(): PluginState {
-        return pluginState
-    }
+    override fun getState(): PluginState = pluginState
 
     override fun loadState(state: PluginState) {
         XmlSerializerUtil.copyBean(state, this.pluginState)
@@ -32,5 +30,12 @@ class PluginSettingsState : PersistentStateComponent<PluginSettingsState.PluginS
         var isAutoDetectJiraProjectKey = false
         var isConventionalCommit = false
         var jiraProjectKeys = emptyList<String>()
+
+        var jiraIssueKey = ""
+        var jiraBaseUrl = "https://jira.srvrg.com"
+        var jiraUser = "tikhonov"
+        var jiraCertificatePath = ""
+        var svnRepositoryUrl = "https://svn.srvrg.com/svn/PaySys"
+        var svnUsername = "tikhonov"
     }
 }

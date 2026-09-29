@@ -22,6 +22,7 @@ class PluginSettingsConfigurationPanel {
     val jiraCertificatePasswordField = JBPasswordField()
     val jiraJqlField = JBTextField()
     val publishSvnRevisionCheckbox = JBCheckBox()
+    val visualSvnWebUrlField = JBTextField()
 
     lateinit var mainPanel: JPanel
     var messageWrapperTypeDropdown: ComboBox<String> = ComboBox()
@@ -107,6 +108,7 @@ class PluginSettingsConfigurationPanel {
             .addLabeledComponent(JBLabel("JIRA JQL"), jiraJqlField, 1, false)
             .addComponent(testJiraButton, 1)
             .addLabeledComponent(JBLabel("Publish SVN revision to JIRA after commit"), publishSvnRevisionCheckbox, 1, false)
+            .addLabeledComponent(JBLabel("VisualSVN Web URL"), visualSvnWebUrlField, 1, false)
             .addSeparator()
             .addLabeledComponent(JBLabel("Commit message wrapper"), messageWrapperTypeDropdown, 1, false)
             .addLabeledComponent(JBLabel("Commit message prefix"), prefixTypeDropdown, 1, false)

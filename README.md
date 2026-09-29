@@ -19,6 +19,14 @@ The current JIRA issue is configured explicitly in **Settings > Tools > JIRA SVN
 
 Formatting from the original plugin is preserved: wrapper, prefix, infix and prepend-to-existing-message options.
 
+## Installation
+
+1. Open the repository's **Releases** page.
+2. Download the plugin `.zip` attached to the latest release. Do not unpack it.
+3. In CLion/IntelliJ IDEA open **Settings > Plugins**.
+4. Click the gear icon and choose **Install Plugin from Disk...**.
+5. Select the downloaded ZIP and restart the IDE when prompted.
+
 ## Build
 
 ```bash

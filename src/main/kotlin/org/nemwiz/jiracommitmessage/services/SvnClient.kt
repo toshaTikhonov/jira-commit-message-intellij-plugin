@@ -54,6 +54,34 @@ class SvnClient(private val workingCopyPath: String? = null) {
             ?: entries.firstOrNull { it.message.contains(issueKey, ignoreCase = true) }
     }
 
+    fun committedRevision(paths: Collection<String>): SvnRevision? {
+        val revisions = paths.mapNotNull { path ->
+            runCatching {
+                val xml = runSvnForTarget(path, "info", "--xml")
+                val revision = Regex("<commit[^>]*revision=\\\"(\\d+)\\\">")
+                    .find(xml)?.groupValues?.get(1)?.toLong() ?: return@runCatching null
+                revision to path
+            }.getOrNull()
+        }
+
+        val revision = revisions.maxOfOrNull { it.first } ?: return null
+        // Read the authoritative log entry from a file that belongs to this revision.
+        val target = revisions.first { it.first == revision }.second
+        val xml = runSvnForTarget(target, "log", "--xml", "-v", "-r", revision.toString())
+        val match = Regex("<logentry revision=\\\"(\\d+)\\\">([\\s\\S]*?)</logentry>").find(xml)
+            ?: return null
+        val body = match.groupValues[2]
+        return SvnRevision(
+            revision,
+            tag(body, "author"),
+            unescapeXml(tag(body, "msg")),
+            Regex("<path[^>]*action=\\\"([^\\\"]+)\\\"[^>]*>(.*?)</path>")
+                .findAll(body)
+                .map { it.groupValues[1] to unescapeXml(it.groupValues[2]) }
+                .toList()
+        )
+    }
+
     fun searchDiagnostics(): String = lastSearchDiagnostics
 
     fun headRevision(): Long {
@@ -118,10 +146,12 @@ class SvnClient(private val workingCopyPath: String? = null) {
         workingCopyPath?.takeIf { it.isNotBlank() }
             ?: error("SVN working copy is not available")
 
-    private fun runSvn(vararg args: String): String {
+    private fun runSvn(vararg args: String): String = runSvnForTarget(svnTarget(), *args)
+
+    private fun runSvnForTarget(target: String, vararg args: String): String {
         val command = mutableListOf(findSvnExecutable())
         command += args
-        command += svnTarget()
+        command += target
         command += "--non-interactive"
 
         val process = ProcessBuilder(command).redirectErrorStream(true).start()

@@ -39,7 +39,5 @@ class PluginSettingsState : PersistentStateComponent<PluginSettingsState.PluginS
         var jiraJql = "assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC"
         var publishSvnRevisionToJira = false
 
-        var svnRepositoryUrl = ""
-        var svnUsername = ""
     }
 }

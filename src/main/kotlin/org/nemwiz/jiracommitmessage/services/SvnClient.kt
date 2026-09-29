@@ -57,8 +57,31 @@ class SvnClient {
         return lines.joinToString("\\n")
     }
 
+    private fun findSvnExecutable(): String {
+        val pathCandidates = System.getenv("PATH")
+            .orEmpty()
+            .split(File.pathSeparator)
+            .filter { it.isNotBlank() }
+            .map { File(it, "svn") }
+
+        val candidates = pathCandidates + listOf(
+            File("/opt/homebrew/bin/svn"),
+            File("/usr/local/bin/svn"),
+            File("/usr/bin/svn")
+        )
+
+        return candidates
+            .distinctBy { it.absolutePath }
+            .firstOrNull { it.isFile && it.canExecute() }
+            ?.absolutePath
+            ?: error(
+                "SVN executable not found. Checked PATH and: " +
+                    "/opt/homebrew/bin/svn, /usr/local/bin/svn, /usr/bin/svn"
+            )
+    }
+
     private fun runSvn(vararg args: String): String {
-        val command = mutableListOf("svn")
+        val command = mutableListOf(findSvnExecutable())
         command += args
         command += state.svnRepositoryUrl
         command += "--non-interactive"

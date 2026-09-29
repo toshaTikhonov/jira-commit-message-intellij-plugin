@@ -14,11 +14,10 @@ class SvnClient {
     private val state get() = PluginSettingsState.instance.state
 
     fun findCommittedRevision(previousRevision: Long, expectedMessage: String, issueKey: String): SvnRevision? {
-        val head = headRevision()
-        if (head <= previousRevision) return null
-
         val from = previousRevision + 1
-        val xml = runSvn("log", "--xml", "-v", "-r", head.toString() + ":" + from)
+        // Ask SVN for HEAD directly. "svn info" on a repository subpath reports that
+        // node's revision and may stay unchanged when a commit touches another path.
+        val xml = runSvn("log", "--xml", "-v", "-r", "HEAD:" + from)
         val entries = Regex("<logentry revision=\\\"(\\d+)\\\">([\\s\\S]*?)</logentry>")
             .findAll(xml)
             .map { match ->

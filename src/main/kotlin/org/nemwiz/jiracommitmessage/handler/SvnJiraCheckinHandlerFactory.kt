@@ -62,11 +62,11 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
                 ApplicationManager.getApplication().executeOnPooledThread {
                     runCatching {
                         val svn = SvnClient()
-                        var revision = svn.findCommittedRevision(oldRevision, message)
-                        repeat(4) {
+                        var revision = svn.findCommittedRevision(oldRevision, message, issueKey)
+                        repeat(10) {
                             if (revision != null) return@repeat
-                            Thread.sleep(500)
-                            revision = svn.findCommittedRevision(oldRevision, message)
+                            Thread.sleep(1000)
+                            revision = svn.findCommittedRevision(oldRevision, message, issueKey)
                         }
                         val committed = revision ?: error("SVN revision not found after successful commit")
                         JiraClient().addComment(issueKey, svn.jiraComment(committed))

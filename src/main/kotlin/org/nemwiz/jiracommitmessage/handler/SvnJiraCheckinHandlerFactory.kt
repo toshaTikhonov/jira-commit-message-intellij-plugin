@@ -44,7 +44,7 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
                 ApplicationManager.getApplication().executeOnPooledThread {
                     runCatching {
                         val svn = SvnClient(panel.project.basePath)
-                        val committed = svn.committedRevision(committedPaths)
+                        val committed = svn.committedRevision(committedPaths, message)
                             ?: error("SVN revision not found in committed files. " + svn.searchDiagnostics())
                         JiraClient().addComment(issueKey, svn.jiraComment(committed))
                         PluginNotifier().showInfo(

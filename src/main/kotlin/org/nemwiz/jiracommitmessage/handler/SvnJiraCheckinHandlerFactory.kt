@@ -22,21 +22,13 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
         // Do not use vcsIsAffected("svn") here: the VCS display/key name differs between
         // IDE versions and caused the handler to be silently replaced with DUMMY.
         return object : CheckinHandler(), DumbAware {
-            private var beforeRevision: Long? = null
+            private var committedPaths: List<String> = emptyList()
 
             override fun beforeCheckin(): ReturnResult {
                 if (PluginSettingsState.instance.state.publishSvnRevisionToJira) {
-                    runCatching { SvnClient(panel.project.basePath).headRevision() }
-                        .onSuccess { beforeRevision = it }
-                        .onFailure {
-                            LOG.warn("Cannot read SVN revision before commit", it)
-                            PluginNotifier().showWarning(
-                                panel.project,
-                                "JIRA SVN Commit Message",
-                                "Не удалось определить SVN revision перед commit: " + (it.message ?: "unknown error"),
-                                null
-                            )
-                        }
+                    committedPaths = panel.selectedChanges.mapNotNull { change ->
+                        change.afterRevision?.file?.path ?: change.beforeRevision?.file?.path
+                    }.distinct()
                 }
                 return ReturnResult.COMMIT
             }
@@ -49,28 +41,11 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
                 val issueKey = panel.project.service<JiraCommitMessagePlugin>().extractIssueKey(message)
                     ?: state.jiraIssueKey.trim().takeIf { it.isNotEmpty() }
                     ?: return
-                val oldRevision = beforeRevision ?: run {
-                    PluginNotifier().showWarning(
-                        panel.project,
-                        "JIRA SVN Commit Message",
-                        "SVN commit выполнен, но исходная revision не была определена — публикация в Jira пропущена.",
-                        null
-                    )
-                    return
-                }
-
                 ApplicationManager.getApplication().executeOnPooledThread {
                     runCatching {
                         val svn = SvnClient(panel.project.basePath)
-                        var revision = svn.findCommittedRevision(oldRevision, message, issueKey)
-                        repeat(10) {
-                            if (revision != null) return@repeat
-                            Thread.sleep(1000)
-                            revision = svn.findCommittedRevision(oldRevision, message, issueKey)
-                        }
-                        val committed = revision ?: error(
-                            "SVN revision not found after successful commit. " + svn.searchDiagnostics()
-                        )
+                        val committed = svn.committedRevision(committedPaths)
+                            ?: error("SVN revision not found in committed files (" + committedPaths.size + " paths)")
                         JiraClient().addComment(issueKey, svn.jiraComment(committed))
                         PluginNotifier().showInfo(
                             panel.project,

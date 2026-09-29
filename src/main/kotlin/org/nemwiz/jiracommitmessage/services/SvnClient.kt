@@ -13,25 +13,43 @@ data class SvnRevision(
 class SvnClient {
     private val state get() = PluginSettingsState.instance.state
 
-    fun findCommittedRevision(previousRevision: Long, expectedMessage: String): SvnRevision? {
+    fun findCommittedRevision(previousRevision: Long, expectedMessage: String, issueKey: String): SvnRevision? {
         val head = headRevision()
         if (head <= previousRevision) return null
 
-        val from = maxOf(previousRevision + 1, head - 10)
+        val from = previousRevision + 1
         val xml = runSvn("log", "--xml", "-v", "-r", head.toString() + ":" + from)
         val entries = Regex("<logentry revision=\\\"(\\d+)\\\">([\\s\\S]*?)</logentry>")
-        return entries.findAll(xml).map { match ->
-            val body = match.groupValues[2]
-            SvnRevision(
-                match.groupValues[1].toLong(),
-                tag(body, "author"),
-                unescapeXml(tag(body, "msg")),
-                Regex("<path[^>]*action=\\\"([^\\\"]+)\\\"[^>]*>(.*?)</path>")
-                    .findAll(body)
-                    .map { it.groupValues[1] to unescapeXml(it.groupValues[2]) }
-                    .toList()
-            )
-        }.firstOrNull { it.message.trim() == expectedMessage.trim() }
+            .findAll(xml)
+            .map { match ->
+                val body = match.groupValues[2]
+                SvnRevision(
+                    match.groupValues[1].toLong(),
+                    tag(body, "author"),
+                    unescapeXml(tag(body, "msg")),
+                    Regex("<path[^>]*action=\\\"([^\\\"]+)\\\"[^>]*>(.*?)</path>")
+                        .findAll(body)
+                        .map { it.groupValues[1] to unescapeXml(it.groupValues[2]) }
+                        .toList()
+                )
+            }
+            .toList()
+
+        fun normalize(value: String) = value
+            .replace("\\r\\n", "\\n")
+            .trim()
+            .replace(Regex("[ \\t]+"), " ")
+
+        val expected = normalize(expectedMessage)
+        val username = state.svnUsername.trim()
+
+        // Prefer the exact commit message. If the IDE/SVN integration has normalized
+        // whitespace, fall back to the same author + Jira issue in the new revisions.
+        return entries.firstOrNull { normalize(it.message) == expected }
+            ?: entries.firstOrNull {
+                (username.isBlank() || it.author.equals(username, ignoreCase = true)) &&
+                    it.message.contains(issueKey, ignoreCase = true)
+            }
     }
 
     fun headRevision(): Long {

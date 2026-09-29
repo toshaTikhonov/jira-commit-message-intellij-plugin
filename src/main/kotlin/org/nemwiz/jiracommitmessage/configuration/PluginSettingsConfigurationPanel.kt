@@ -49,6 +49,15 @@ class PluginSettingsConfigurationPanel {
         }
 
         refreshIssuesButton.addActionListener {
+            // Refresh is an explicit connection attempt: persist the values currently
+            // visible in the form first, so JiraClient never uses stale Password Safe data.
+            val state = PluginSettingsState.instance.state
+            state.jiraBaseUrl = jiraBaseUrlField.text.trim()
+            state.jiraUser = jiraUserField.text.trim()
+            state.jiraCertificatePath = jiraCertificatePathField.text.trim()
+            state.jiraJql = jiraJqlField.text.trim()
+            savePasswords()
+
             refreshIssuesButton.isEnabled = false
             Thread {
                 runCatching { JiraClient().searchIssues() }.onSuccess { issues ->

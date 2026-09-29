@@ -13,48 +13,6 @@ data class SvnRevision(
 class SvnClient(private val workingCopyPath: String? = null) {
     private var lastSearchDiagnostics: String = ""
 
-    fun findCommittedRevision(previousRevision: Long, expectedMessage: String, issueKey: String): SvnRevision? {
-        val from = previousRevision + 1
-        // Ask SVN for HEAD directly. "svn info" on a repository subpath reports that
-        // node's revision and may stay unchanged when a commit touches another path.
-        val xml = runSvn("log", "--xml", "-v", "-r", "HEAD:" + from)
-        val entries = Regex("<logentry revision=\\\"(\\d+)\\\">([\\s\\S]*?)</logentry>")
-            .findAll(xml)
-            .map { match ->
-                val body = match.groupValues[2]
-                SvnRevision(
-                    match.groupValues[1].toLong(),
-                    tag(body, "author"),
-                    unescapeXml(tag(body, "msg")),
-                    Regex("<path[^>]*action=\\\"([^\\\"]+)\\\"[^>]*>(.*?)</path>")
-                        .findAll(body)
-                        .map { it.groupValues[1] to unescapeXml(it.groupValues[2]) }
-                        .toList()
-                )
-            }
-            .toList()
-
-        fun normalize(value: String) = value
-            .replace("\\r\\n", "\\n")
-            .trim()
-            .replace(Regex("[ \\t]+"), " ")
-
-        val expected = normalize(expectedMessage)
-        lastSearchDiagnostics = if (entries.isEmpty()) {
-            "old HEAD=r" + previousRevision + ", svn log returned no revisions"
-        } else {
-            "old HEAD=r" + previousRevision + ", returned: " +
-                entries.take(10).joinToString("; ") {
-                    "r" + it.revision + " [" + it.author + "] " +
-                        normalize(it.message).take(120)
-                }
-        }
-        // Prefer the exact commit message. If the IDE/SVN integration has normalized
-        // whitespace, fall back to the same author + Jira issue in the new revisions.
-        return entries.firstOrNull { normalize(it.message) == expected }
-            ?: entries.firstOrNull { it.message.contains(issueKey, ignoreCase = true) }
-    }
-
     fun committedRevision(
         paths: Collection<String>,
         commitMessage: String
@@ -118,12 +76,6 @@ class SvnClient(private val workingCopyPath: String? = null) {
     }
 
     fun searchDiagnostics(): String = lastSearchDiagnostics
-
-    fun headRevision(): Long {
-        val xml = runSvn("info", "--xml")
-        return Regex("<entry[^>]*revision=\\\"(\\d+)\\\"").find(xml)?.groupValues?.get(1)?.toLong()
-            ?: error("Cannot read SVN HEAD revision")
-    }
 
     fun jiraComment(revision: SvnRevision): String {
         val state = PluginSettingsState.instance.state

@@ -25,7 +25,7 @@ class PluginSettingsConfigurationPanel {
     val svnUsernameField = JBTextField()
     val svnPasswordField = JBPasswordField()
 
-    var mainPanel: JPanel
+    lateinit var mainPanel: JPanel
     var messageWrapperTypeDropdown: ComboBox<String> = ComboBox()
     var prefixTypeDropdown: ComboBox<String> = ComboBox()
     var infixTypeDropdown: ComboBox<String> = ComboBox()

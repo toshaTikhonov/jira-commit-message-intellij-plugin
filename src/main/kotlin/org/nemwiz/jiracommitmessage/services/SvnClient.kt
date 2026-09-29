@@ -1,6 +1,5 @@
 package org.nemwiz.jiracommitmessage.services
 
-import org.nemwiz.jiracommitmessage.configuration.PluginSettingsState
 import java.io.File
 
 data class SvnRevision(
@@ -11,8 +10,6 @@ data class SvnRevision(
 )
 
 class SvnClient(private val workingCopyPath: String? = null) {
-    private val state get() = PluginSettingsState.instance.state
-
     fun findCommittedRevision(previousRevision: Long, expectedMessage: String, issueKey: String): SvnRevision? {
         val from = previousRevision + 1
         // Ask SVN for HEAD directly. "svn info" on a repository subpath reports that
@@ -40,15 +37,10 @@ class SvnClient(private val workingCopyPath: String? = null) {
             .replace(Regex("[ \\t]+"), " ")
 
         val expected = normalize(expectedMessage)
-        val username = state.svnUsername.trim()
-
         // Prefer the exact commit message. If the IDE/SVN integration has normalized
         // whitespace, fall back to the same author + Jira issue in the new revisions.
         return entries.firstOrNull { normalize(it.message) == expected }
-            ?: entries.firstOrNull {
-                (username.isBlank() || it.author.equals(username, ignoreCase = true)) &&
-                    it.message.contains(issueKey, ignoreCase = true)
-            }
+            ?: entries.firstOrNull { it.message.contains(issueKey, ignoreCase = true) }
     }
 
     fun headRevision(): Long {
@@ -111,16 +103,13 @@ class SvnClient(private val workingCopyPath: String? = null) {
 
     private fun svnTarget(): String =
         workingCopyPath?.takeIf { it.isNotBlank() }
-            ?: state.svnRepositoryUrl.takeIf { it.isNotBlank() }
-            ?: error("SVN working copy is not available and fallback repository URL is not configured")
+            ?: error("SVN working copy is not available")
 
     private fun runSvn(vararg args: String): String {
         val command = mutableListOf(findSvnExecutable())
         command += args
         command += svnTarget()
         command += "--non-interactive"
-        if (state.svnUsername.isNotBlank()) command += listOf("--username", state.svnUsername)
-        if (CredentialService.svnPassword.isNotBlank()) command += listOf("--password", CredentialService.svnPassword)
 
         val process = ProcessBuilder(command).redirectErrorStream(true).start()
         val output = process.inputStream.bufferedReader().use { it.readText() }

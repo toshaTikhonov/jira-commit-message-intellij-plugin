@@ -24,6 +24,7 @@ class PluginSettingsConfiguration : Configurable {
             String(panel.jiraCertificatePasswordField.password) != CredentialService.jiraCertificatePassword ||
             panel.jiraJqlField.text != state.jiraJql ||
             panel.publishSvnRevisionCheckbox.isSelected != state.publishSvnRevisionToJira ||
+            panel.visualSvnWebUrlField.text.trim() != state.visualSvnWebUrl ||
             panel.messageWrapperTypeDropdown.selectedItem != state.messageWrapperType ||
             panel.prefixTypeDropdown.selectedItem != state.messagePrefixType ||
             panel.infixTypeDropdown.selectedItem != state.messageInfixType ||
@@ -38,6 +39,7 @@ class PluginSettingsConfiguration : Configurable {
         state.jiraCertificatePath = panel.jiraCertificatePathField.text.trim()
         state.jiraJql = panel.jiraJqlField.text.trim()
         state.publishSvnRevisionToJira = panel.publishSvnRevisionCheckbox.isSelected
+        state.visualSvnWebUrl = panel.visualSvnWebUrlField.text.trim()
         state.messageWrapperType = panel.messageWrapperTypeDropdown.selectedItem.toString()
         state.messagePrefixType = panel.prefixTypeDropdown.selectedItem.toString()
         state.messageInfixType = panel.infixTypeDropdown.selectedItem.toString()
@@ -57,6 +59,7 @@ class PluginSettingsConfiguration : Configurable {
         panel.jiraCertificatePathField.text = state.jiraCertificatePath
         panel.jiraJqlField.text = state.jiraJql
         panel.publishSvnRevisionCheckbox.isSelected = state.publishSvnRevisionToJira
+        panel.visualSvnWebUrlField.text = state.visualSvnWebUrl
         panel.messageWrapperTypeDropdown.selectedItem = state.messageWrapperType
         panel.prefixTypeDropdown.selectedItem = state.messagePrefixType
         panel.infixTypeDropdown.selectedItem = state.messageInfixType

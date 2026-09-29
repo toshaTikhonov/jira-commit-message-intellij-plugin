@@ -50,10 +50,12 @@ class PluginSettingsConfigurationPanel {
         }
 
         testJiraButton.addActionListener {
-            persistJiraForm()
+            persistJiraForm(saveCredentials = false)
+            val jiraPassword = String(jiraPasswordField.password)
+            val certificatePassword = jiraCertificatePasswordField.password.copyOf()
             testJiraButton.isEnabled = false
             Thread {
-                runCatching { JiraClient().testConnection() }.onSuccess { result ->
+                runCatching { JiraClient(jiraPassword, certificatePassword).testConnection() }.onSuccess { result ->
                     javax.swing.SwingUtilities.invokeLater {
                         testJiraButton.isEnabled = true
                         javax.swing.JOptionPane.showMessageDialog(mainPanel, result, "Jira connection", javax.swing.JOptionPane.INFORMATION_MESSAGE)
@@ -70,11 +72,13 @@ class PluginSettingsConfigurationPanel {
         refreshIssuesButton.addActionListener {
             // Refresh is an explicit connection attempt: persist the values currently
             // visible in the form first, so JiraClient never uses stale Password Safe data.
-            persistJiraForm()
+            persistJiraForm(saveCredentials = false)
+            val jiraPassword = String(jiraPasswordField.password)
+            val certificatePassword = jiraCertificatePasswordField.password.copyOf()
 
             refreshIssuesButton.isEnabled = false
             Thread {
-                runCatching { JiraClient().searchIssues() }.onSuccess { issues ->
+                runCatching { JiraClient(jiraPassword, certificatePassword).searchIssues() }.onSuccess { issues ->
                     javax.swing.SwingUtilities.invokeLater {
                         val selected = currentIssueKey()
                         jiraIssueCombo.removeAllItems()
@@ -120,13 +124,13 @@ class PluginSettingsConfigurationPanel {
             .addComponentFillVertically(JPanel(), 0).panel
     }
 
-    private fun persistJiraForm() {
+    private fun persistJiraForm(saveCredentials: Boolean = true) {
         val state = PluginSettingsState.instance.state
         state.jiraBaseUrl = jiraBaseUrlField.text.trim()
         state.jiraUser = jiraUserField.text.trim()
         state.jiraCertificatePath = jiraCertificatePathField.text.trim()
         state.jiraJql = jiraJqlField.text.trim()
-        savePasswords()
+        if (saveCredentials) savePasswords()
     }
 
     fun currentIssueKey(): String =

@@ -14,6 +14,7 @@ import org.nemwiz.jiracommitmessage.services.JiraClient
 class PluginSettingsConfigurationPanel {
     val jiraIssueCombo = ComboBox<String>().apply { isEditable = true }
     val refreshIssuesButton = JButton("Refresh issues")
+    val testJiraButton = JButton("Test JIRA connection")
     val jiraBaseUrlField = JBTextField()
     val jiraUserField = JBTextField()
     val jiraPasswordField = JBPasswordField()
@@ -48,15 +49,28 @@ class PluginSettingsConfigurationPanel {
             if (dialog.showAndGet()) projectKeysModel.add(dialog.addProjectKeyField.text)
         }
 
+        testJiraButton.addActionListener {
+            persistJiraForm()
+            testJiraButton.isEnabled = false
+            Thread {
+                runCatching { JiraClient().testConnection() }.onSuccess { result ->
+                    javax.swing.SwingUtilities.invokeLater {
+                        testJiraButton.isEnabled = true
+                        javax.swing.JOptionPane.showMessageDialog(mainPanel, result, "Jira connection", javax.swing.JOptionPane.INFORMATION_MESSAGE)
+                    }
+                }.onFailure {
+                    javax.swing.SwingUtilities.invokeLater {
+                        testJiraButton.isEnabled = true
+                        javax.swing.JOptionPane.showMessageDialog(mainPanel, it.message, "Jira connection", javax.swing.JOptionPane.ERROR_MESSAGE)
+                    }
+                }
+            }.start()
+        }
+
         refreshIssuesButton.addActionListener {
             // Refresh is an explicit connection attempt: persist the values currently
             // visible in the form first, so JiraClient never uses stale Password Safe data.
-            val state = PluginSettingsState.instance.state
-            state.jiraBaseUrl = jiraBaseUrlField.text.trim()
-            state.jiraUser = jiraUserField.text.trim()
-            state.jiraCertificatePath = jiraCertificatePathField.text.trim()
-            state.jiraJql = jiraJqlField.text.trim()
-            savePasswords()
+            persistJiraForm()
 
             refreshIssuesButton.isEnabled = false
             Thread {
@@ -90,6 +104,7 @@ class PluginSettingsConfigurationPanel {
             .addLabeledComponent(JBLabel("JIRA client certificate (.p12)"), jiraCertificatePathField, 1, false)
             .addLabeledComponent(JBLabel("Certificate password (Password Safe)"), jiraCertificatePasswordField, 1, false)
             .addLabeledComponent(JBLabel("JIRA JQL"), jiraJqlField, 1, false)
+            .addComponent(testJiraButton, 1)
             .addLabeledComponent(JBLabel("Publish SVN revision to JIRA after commit"), publishSvnRevisionCheckbox, 1, false)
             .addSeparator()
             .addLabeledComponent(JBLabel("SVN repository URL"), svnRepositoryUrlField, 1, false)
@@ -103,6 +118,15 @@ class PluginSettingsConfigurationPanel {
             .addLabeledComponent(JBLabel("Detect JIRA issue in commit text"), isAutoDetectJiraProjectKeyCheckbox, 1, false)
             .addLabeledComponent(JBLabel("JIRA project keys"), toolbar.createPanel(), 9, true)
             .addComponentFillVertically(JPanel(), 0).panel
+    }
+
+    private fun persistJiraForm() {
+        val state = PluginSettingsState.instance.state
+        state.jiraBaseUrl = jiraBaseUrlField.text.trim()
+        state.jiraUser = jiraUserField.text.trim()
+        state.jiraCertificatePath = jiraCertificatePathField.text.trim()
+        state.jiraJql = jiraJqlField.text.trim()
+        savePasswords()
     }
 
     fun currentIssueKey(): String =

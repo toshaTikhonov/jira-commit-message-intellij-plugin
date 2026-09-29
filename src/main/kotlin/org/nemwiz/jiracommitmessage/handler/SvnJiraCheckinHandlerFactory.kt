@@ -68,7 +68,9 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
                             Thread.sleep(1000)
                             revision = svn.findCommittedRevision(oldRevision, message, issueKey)
                         }
-                        val committed = revision ?: error("SVN revision not found after successful commit")
+                        val committed = revision ?: error(
+                            "SVN revision not found after successful commit. " + svn.searchDiagnostics()
+                        )
                         JiraClient().addComment(issueKey, svn.jiraComment(committed))
                         PluginNotifier().showInfo(
                             panel.project,

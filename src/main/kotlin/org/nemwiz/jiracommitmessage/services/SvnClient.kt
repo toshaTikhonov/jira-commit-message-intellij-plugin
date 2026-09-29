@@ -62,27 +62,28 @@ class SvnClient(private val workingCopyPath: String? = null) {
 
         var lastErrors = emptyList<String>()
         repeat(10) { attempt ->
-            val revisions = mutableListOf<Pair<Long, String>>()
             val errors = mutableListOf<String>()
 
             paths.forEach { path ->
                 runCatching {
-                    val output = runSvnForTarget(path, "info", "--show-item", "last-changed-revision")
-                    val revision = output.trim().toLongOrNull()
-                        ?: error("unexpected svn info output: " + output.trim().take(160))
-                    revisions += revision to path
-                }.onFailure {
-                    errors += File(path).name + ": " + (it.message ?: "unknown error")
-                }
-            }
+                    val revisionText = runSvnForTarget(
+                        path, "info", "--show-item", "last-changed-revision"
+                    ).trim()
+                    val revision = revisionText.toLongOrNull()
+                        ?: error("unexpected revision: " + revisionText.take(160))
 
-            val revision = revisions.maxOfOrNull { it.first }
-            if (revision != null) {
-                val target = revisions.first { it.first == revision }.second
-                val xml = runSvnForTarget(target, "log", "--xml", "-v", "-r", revision.toString())
-                val match = Regex("<logentry revision=\\\"(\\d+)\\\">([\\s\\S]*?)</logentry>").find(xml)
-                if (match != null) {
+                    val repositoryRoot = runSvnForTarget(
+                        path, "info", "--show-item", "repos-root-url"
+                    ).trim().takeIf { it.isNotEmpty() }
+                        ?: error("repository root URL is empty")
+
+                    val xml = runSvnForTarget(
+                        repositoryRoot, "log", "--xml", "-v", "-r", revision.toString()
+                    )
+                    val match = Regex("<logentry revision=\\\"(\\d+)\\\">([\\s\\S]*?)</logentry>")
+                        .find(xml) ?: error("repository log has no r" + revision)
                     val body = match.groupValues[2]
+
                     return SvnRevision(
                         revision,
                         tag(body, "author"),
@@ -92,15 +93,16 @@ class SvnClient(private val workingCopyPath: String? = null) {
                             .map { it.groupValues[1] to unescapeXml(it.groupValues[2]) }
                             .toList()
                     )
+                }.onFailure {
+                    errors += File(path).name + ": " + (it.message ?: "unknown error")
                 }
-                errors += File(target).name + ": svn log has no r" + revision
             }
 
             lastErrors = errors
             if (attempt < 9) Thread.sleep(500)
         }
 
-        lastSearchDiagnostics = "svn info failed for " + paths.size + " path(s): " +
+        lastSearchDiagnostics = "svn revision lookup failed for " + paths.size + " path(s): " +
             lastErrors.joinToString("; ").take(1000)
         return null
     }
@@ -115,9 +117,8 @@ class SvnClient(private val workingCopyPath: String? = null) {
 
     fun jiraComment(revision: SvnRevision): String {
         val repo = repositoryUrl().trimEnd('/')
-        val revisionUrl = repo + "/?p=" + revision.revision
         val lines = mutableListOf(
-            "[SVN revision r" + revision.revision + "|" + revisionUrl + "]",
+            "SVN revision r" + revision.revision,
             "Репозиторий: " + repo,
             "Автор: " + revision.author,
             "",

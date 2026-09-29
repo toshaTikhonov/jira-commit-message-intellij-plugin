@@ -34,6 +34,8 @@ jobs:
       version: ${{ steps.properties.outputs.version }}
       changelog: ${{ steps.properties.outputs.changelog }}
       pluginVerifierHomeDir: ${{ steps.properties.outputs.pluginVerifierHomeDir }}
+      artifactName: ${{ steps.artifact.outputs.name }}
+      artifactFilename: ${{ steps.artifact.outputs.filename }}
     steps:
 
       # Check out the current repository
@@ -77,23 +79,24 @@ jobs:
       - name: Build plugin
         run: ./gradlew buildPlugin
 
-      # Prepare plugin archive content for creating artifact
+      # Find the installable plugin ZIP produced by buildPlugin
       - name: Prepare Plugin Artifact
         id: artifact
         shell: bash
         run: |
           cd ${{ github.workspace }}/build/distributions
-          FILENAME=`ls *.zip`
-          unzip "$FILENAME" -d content
+          FILENAME="$(ls *.zip | head -n 1)"
+          echo "filename=$FILENAME" >> "$GITHUB_OUTPUT"
+          echo "name=${FILENAME%.zip}" >> "$GITHUB_OUTPUT"
 
-          echo "filename=${FILENAME:0:-4}" >> $GITHUB_OUTPUT
-
-      # Store already-built plugin as an artifact for downloading
+      # Keep the exact ZIP that can be installed with "Install Plugin from Disk"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.artifact.outputs.filename }}
-          path: ./build/distributions/content/*/*
+          name: ${{ steps.artifact.outputs.name }}
+          path: ./build/distributions/${{ steps.artifact.outputs.filename }}
+          if-no-files-found: error
+
 
   # Run tests and upload a code coverage report
   test:
@@ -237,6 +240,12 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
 
+      - name: Download Plugin ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifactName }}
+          path: release
+
       # Remove old release drafts by using the curl request for the available releases with a draft flag
       - name: Remove Old Release Drafts
         env:
@@ -252,6 +261,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "v${{ needs.build.outputs.version }}" \
+            "release/${{ needs.build.outputs.artifactFilename }}" \
             --draft \
             --title "v${{ needs.build.outputs.version }}" \
             --notes "$(cat << 'EOM'

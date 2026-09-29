@@ -63,7 +63,9 @@ class JiraClient(
         connection.setRequestProperty("Accept", "application/json")
         connection.setRequestProperty("Content-Type", "application/json")
         val authSource = state.jiraUser + ":" + jiraPassword
-        val auth = java.util.Base64.getEncoder().encodeToString(authSource.toByteArray(StandardCharsets.UTF_8))
+        // Match Python requests' HTTP Basic Auth behavior used by jira-activity:
+        // RFC 7617-compatible credentials are encoded as ISO-8859-1 before Base64.
+        val auth = java.util.Base64.getEncoder().encodeToString(authSource.toByteArray(StandardCharsets.ISO_8859_1))
         connection.setRequestProperty("Authorization", "Basic " + auth)
         if (requestBody != null) {
             connection.doOutput = true

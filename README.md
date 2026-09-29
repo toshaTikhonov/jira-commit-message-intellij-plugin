@@ -1,31 +1,33 @@
-# jira-commit-message-intellij-plugin
+# JIRA SVN Commit
 
-Fork adapted for CLion/IntelliJ projects that use **Subversion (SVN)** instead of Git.
+IntelliJ Platform plugin for projects that use **Subversion (SVN)** and **Jira**.
 
 <!-- Plugin description -->
-The plugin inserts a JIRA issue id into the SVN commit message in the IDE commit dialog/tool window.
-Unlike the original Git version, it does not depend on a Git branch name.
+JIRA SVN Commit inserts the selected Jira issue into an SVN commit message and can publish the resulting SVN revision back to Jira after a successful commit.
 
-The current JIRA issue is configured explicitly in **Settings > Tools > JIRA SVN Commit Message**.
+It uses the IDE's Subversion integration and the current working copy. Jira credentials are stored through IntelliJ Password Safe. VisualSVN links can use a separately configured web URL.
 <!-- Plugin description end -->
 
-## Usage
+## Features
 
-1. Open **Settings > Tools > JIRA SVN Commit Message**.
-2. Set **Current JIRA issue**.
-3. Open the SVN Commit dialog/tool window.
-4. The plugin fills the message with the configured issue id.
-5. If the message was cleared, use the frog action to insert it again.
-
-Formatting from the original plugin is preserved: wrapper, prefix, infix and prepend-to-existing-message options.
+- Select a Jira issue and insert its key into the SVN commit message.
+- Use the current project's SVN working copy and existing SVN authentication.
+- Publish the committed SVN revision to the Jira issue.
+- Include revision, author and changed paths in the Jira comment.
+- Link revisions and changed files to VisualSVN.
+- Store Jira credentials with IntelliJ Password Safe.
 
 ## Installation
 
-1. Open the repository's **Releases** page.
+1. Open this repository's **Releases** page.
 2. Download the plugin `.zip` attached to the latest release. Do not unpack it.
-3. In CLion/IntelliJ IDEA open **Settings > Plugins**.
+3. In CLion or another compatible IntelliJ IDE open **Settings > Plugins**.
 4. Click the gear icon and choose **Install Plugin from Disk...**.
-5. Select the downloaded ZIP and restart the IDE when prompted.
+5. Select the ZIP and restart the IDE when prompted.
+
+## Configuration
+
+Open **Settings > Tools > JIRA SVN Commit** and configure your Jira connection, current issue and optional VisualSVN Web URL. No organization-specific servers or credentials are built into the plugin.
 
 ## Build
 
@@ -33,8 +35,10 @@ Formatting from the original plugin is preserved: wrapper, prefix, infix and pre
 ./gradlew clean buildPlugin
 ```
 
-The plugin now depends on JetBrains' bundled **Subversion** plugin instead of `Git4Idea`.
+The installable ZIP is created in `build/distributions/`.
 
-## Branch
+## Origin and license
 
-SVN adaptation is developed in `feature/svn-support`.
+This project started from the Apache-2.0 licensed **jira-commit-message-intellij-plugin** by nemwiz and was substantially reworked for an SVN/Jira workflow. The original project and contributors are acknowledged here to preserve the origin of the derivative work.
+
+The project remains distributed under the Apache License 2.0. See `LICENSE`.

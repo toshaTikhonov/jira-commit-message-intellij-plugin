@@ -22,11 +22,8 @@ class PluginSettingsConfiguration : Configurable {
             panel.jiraCertificatePathField.text != state.jiraCertificatePath ||
             String(panel.jiraPasswordField.password) != CredentialService.jiraPassword ||
             String(panel.jiraCertificatePasswordField.password) != CredentialService.jiraCertificatePassword ||
-            String(panel.svnPasswordField.password) != CredentialService.svnPassword ||
             panel.jiraJqlField.text != state.jiraJql ||
             panel.publishSvnRevisionCheckbox.isSelected != state.publishSvnRevisionToJira ||
-            panel.svnRepositoryUrlField.text != state.svnRepositoryUrl ||
-            panel.svnUsernameField.text != state.svnUsername ||
             panel.messageWrapperTypeDropdown.selectedItem != state.messageWrapperType ||
             panel.prefixTypeDropdown.selectedItem != state.messagePrefixType ||
             panel.infixTypeDropdown.selectedItem != state.messageInfixType ||
@@ -41,8 +38,6 @@ class PluginSettingsConfiguration : Configurable {
         state.jiraCertificatePath = panel.jiraCertificatePathField.text.trim()
         state.jiraJql = panel.jiraJqlField.text.trim()
         state.publishSvnRevisionToJira = panel.publishSvnRevisionCheckbox.isSelected
-        state.svnRepositoryUrl = panel.svnRepositoryUrlField.text.trim()
-        state.svnUsername = panel.svnUsernameField.text.trim()
         state.messageWrapperType = panel.messageWrapperTypeDropdown.selectedItem.toString()
         state.messagePrefixType = panel.prefixTypeDropdown.selectedItem.toString()
         state.messageInfixType = panel.infixTypeDropdown.selectedItem.toString()
@@ -62,8 +57,6 @@ class PluginSettingsConfiguration : Configurable {
         panel.jiraCertificatePathField.text = state.jiraCertificatePath
         panel.jiraJqlField.text = state.jiraJql
         panel.publishSvnRevisionCheckbox.isSelected = state.publishSvnRevisionToJira
-        panel.svnRepositoryUrlField.text = state.svnRepositoryUrl
-        panel.svnUsernameField.text = state.svnUsername
         panel.messageWrapperTypeDropdown.selectedItem = state.messageWrapperType
         panel.prefixTypeDropdown.selectedItem = state.messagePrefixType
         panel.infixTypeDropdown.selectedItem = state.messageInfixType

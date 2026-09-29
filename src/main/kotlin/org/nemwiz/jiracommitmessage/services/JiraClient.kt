@@ -15,8 +15,14 @@ data class JiraIssue(val key: String, val summary: String) {
     override fun toString(): String = key + " — " + summary
 }
 
-class JiraClient {
+class JiraClient(
+    private val jiraPasswordOverride: String? = null,
+    private val certificatePasswordOverride: CharArray? = null
+) {
     private val state get() = PluginSettingsState.instance.state
+    private val jiraPassword: String get() = jiraPasswordOverride ?: CredentialService.jiraPassword
+    private val certificatePassword: CharArray
+        get() = certificatePasswordOverride?.copyOf() ?: CredentialService.jiraCertificatePassword.toCharArray()
 
     fun searchIssues(): List<JiraIssue> {
         val jql = URLEncoder.encode(state.jiraJql, StandardCharsets.UTF_8)
@@ -56,7 +62,7 @@ class JiraClient {
         connection.readTimeout = 60000
         connection.setRequestProperty("Accept", "application/json")
         connection.setRequestProperty("Content-Type", "application/json")
-        val authSource = state.jiraUser + ":" + CredentialService.jiraPassword
+        val authSource = state.jiraUser + ":" + jiraPassword
         val auth = java.util.Base64.getEncoder().encodeToString(authSource.toByteArray(StandardCharsets.UTF_8))
         connection.setRequestProperty("Authorization", "Basic " + auth)
         if (requestBody != null) {
@@ -75,7 +81,7 @@ class JiraClient {
         require(file.isFile) { "PKCS#12 file not found: " + file.absolutePath }
         require(file.canRead()) { "PKCS#12 file is not readable: " + file.absolutePath }
 
-        val password = CredentialService.jiraCertificatePassword.toCharArray()
+        val password = certificatePassword
         val keyStore = KeyStore.getInstance("PKCS12")
         try {
             file.inputStream().use { keyStore.load(it, password) }

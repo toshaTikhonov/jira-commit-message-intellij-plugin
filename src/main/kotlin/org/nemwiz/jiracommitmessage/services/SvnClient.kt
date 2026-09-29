@@ -10,6 +10,8 @@ data class SvnRevision(
 )
 
 class SvnClient(private val workingCopyPath: String? = null) {
+    private var lastSearchDiagnostics: String = ""
+
     fun findCommittedRevision(previousRevision: Long, expectedMessage: String, issueKey: String): SvnRevision? {
         val from = previousRevision + 1
         // Ask SVN for HEAD directly. "svn info" on a repository subpath reports that
@@ -37,11 +39,22 @@ class SvnClient(private val workingCopyPath: String? = null) {
             .replace(Regex("[ \\t]+"), " ")
 
         val expected = normalize(expectedMessage)
+        lastSearchDiagnostics = if (entries.isEmpty()) {
+            "old HEAD=r" + previousRevision + ", svn log returned no revisions"
+        } else {
+            "old HEAD=r" + previousRevision + ", returned: " +
+                entries.take(10).joinToString("; ") {
+                    "r" + it.revision + " [" + it.author + "] " +
+                        normalize(it.message).take(120)
+                }
+        }
         // Prefer the exact commit message. If the IDE/SVN integration has normalized
         // whitespace, fall back to the same author + Jira issue in the new revisions.
         return entries.firstOrNull { normalize(it.message) == expected }
             ?: entries.firstOrNull { it.message.contains(issueKey, ignoreCase = true) }
     }
+
+    fun searchDiagnostics(): String = lastSearchDiagnostics
 
     fun headRevision(): Long {
         val xml = runSvn("info", "--xml")

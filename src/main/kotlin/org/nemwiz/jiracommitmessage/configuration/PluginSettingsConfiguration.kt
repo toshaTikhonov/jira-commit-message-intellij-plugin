@@ -3,6 +3,7 @@ package org.nemwiz.jiracommitmessage.configuration
 import com.intellij.openapi.options.Configurable
 import com.intellij.ui.CollectionListModel
 import javax.swing.JComponent
+import org.nemwiz.jiracommitmessage.services.CredentialService
 
 class PluginSettingsConfiguration : Configurable {
     private lateinit var panel: PluginSettingsConfigurationPanel
@@ -19,6 +20,9 @@ class PluginSettingsConfiguration : Configurable {
             panel.jiraBaseUrlField.text != state.jiraBaseUrl ||
             panel.jiraUserField.text != state.jiraUser ||
             panel.jiraCertificatePathField.text != state.jiraCertificatePath ||
+            String(panel.jiraPasswordField.password) != CredentialService.jiraPassword ||
+            String(panel.jiraCertificatePasswordField.password) != CredentialService.jiraCertificatePassword ||
+            String(panel.svnPasswordField.password) != CredentialService.svnPassword ||
             panel.jiraJqlField.text != state.jiraJql ||
             panel.publishSvnRevisionCheckbox.isSelected != state.publishSvnRevisionToJira ||
             panel.svnRepositoryUrlField.text != state.svnRepositoryUrl ||

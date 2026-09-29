@@ -28,6 +28,18 @@ class JiraClient {
         return keys.zip(summaries).map { JiraIssue(it.first, it.second) }
     }
 
+    fun testConnection(): String {
+        val sslStatus = if (state.jiraCertificatePath.isBlank()) {
+            "PKCS#12: not configured"
+        } else {
+            val diagnostics = inspectPkcs12()
+            createSslContext()
+            "PKCS#12: OK (" + diagnostics + ")"
+        }
+        request("GET", "/rest/api/2/myself")
+        return sslStatus + "\nTLS: OK\nJira authentication: OK"
+    }
+
     fun addComment(issueKey: String, comment: String) {
         val quote = 34.toChar().toString()
         val json = "{" + quote + "body" + quote + ":" + quote + escape(comment) + quote + "}"
@@ -58,15 +70,61 @@ class JiraClient {
         return text
     }
 
-    private fun createSslContext(): SSLContext {
-        val file = File(state.jiraCertificatePath)
-        require(file.isFile) { "JIRA certificate not found: " + file.absolutePath }
+    private fun loadPkcs12(): Pair<KeyStore, CharArray> {
+        val file = File(state.jiraCertificatePath).absoluteFile
+        require(file.isFile) { "PKCS#12 file not found: " + file.absolutePath }
+        require(file.canRead()) { "PKCS#12 file is not readable: " + file.absolutePath }
+
         val password = CredentialService.jiraCertificatePassword.toCharArray()
         val keyStore = KeyStore.getInstance("PKCS12")
-        file.inputStream().use { keyStore.load(it, password) }
+        try {
+            file.inputStream().use { keyStore.load(it, password) }
+        } catch (e: Exception) {
+            throw IllegalStateException(
+                "PKCS#12 load failed\n" +
+                    "file: " + file.absolutePath + "\n" +
+                    "size: " + file.length() + " bytes\n" +
+                    "password length: " + password.size + "\n" +
+                    "stage: KeyStore.load\n" +
+                    "cause: " + (e.cause?.message ?: e.message ?: e.javaClass.simpleName),
+                e
+            )
+        }
+        return keyStore to password
+    }
+
+    private fun inspectPkcs12(): String {
+        val (keyStore, _) = loadPkcs12()
+        val aliases = keyStore.aliases().toList()
+        val privateKeys = aliases.count { keyStore.isKeyEntry(it) }
+        require(aliases.isNotEmpty()) { "PKCS#12 loaded, but contains no aliases" }
+        require(privateKeys > 0) { "PKCS#12 loaded, but contains no private key entry" }
+        return "aliases=" + aliases.size + ", private keys=" + privateKeys
+    }
+
+    private fun createSslContext(): SSLContext {
+        val (keyStore, password) = loadPkcs12()
         val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-        kmf.init(keyStore, password)
-        return SSLContext.getInstance("TLS").apply { init(kmf.keyManagers, null, null) }
+        try {
+            kmf.init(keyStore, password)
+        } catch (e: Exception) {
+            throw IllegalStateException(
+                "PKCS#12 key initialization failed\n" +
+                    "stage: KeyManagerFactory.init\n" +
+                    "cause: " + (e.cause?.message ?: e.message ?: e.javaClass.simpleName),
+                e
+            )
+        }
+        return try {
+            SSLContext.getInstance("TLS").apply { init(kmf.keyManagers, null, null) }
+        } catch (e: Exception) {
+            throw IllegalStateException(
+                "TLS initialization failed\n" +
+                    "stage: SSLContext.init\n" +
+                    "cause: " + (e.cause?.message ?: e.message ?: e.javaClass.simpleName),
+                e
+            )
+        }
     }
 
     private fun escape(value: String): String {

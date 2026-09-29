@@ -22,9 +22,6 @@ class PluginSettingsConfigurationPanel {
     val jiraCertificatePasswordField = JBPasswordField()
     val jiraJqlField = JBTextField()
     val publishSvnRevisionCheckbox = JBCheckBox()
-    val svnRepositoryUrlField = JBTextField()
-    val svnUsernameField = JBTextField()
-    val svnPasswordField = JBPasswordField()
 
     lateinit var mainPanel: JPanel
     var messageWrapperTypeDropdown: ComboBox<String> = ComboBox()
@@ -111,10 +108,6 @@ class PluginSettingsConfigurationPanel {
             .addComponent(testJiraButton, 1)
             .addLabeledComponent(JBLabel("Publish SVN revision to JIRA after commit"), publishSvnRevisionCheckbox, 1, false)
             .addSeparator()
-            .addLabeledComponent(JBLabel("SVN repository URL"), svnRepositoryUrlField, 1, false)
-            .addLabeledComponent(JBLabel("SVN username"), svnUsernameField, 1, false)
-            .addLabeledComponent(JBLabel("SVN password (Password Safe)"), svnPasswordField, 1, false)
-            .addSeparator()
             .addLabeledComponent(JBLabel("Commit message wrapper"), messageWrapperTypeDropdown, 1, false)
             .addLabeledComponent(JBLabel("Commit message prefix"), prefixTypeDropdown, 1, false)
             .addLabeledComponent(JBLabel("Commit message infix"), infixTypeDropdown, 1, false)
@@ -139,13 +132,11 @@ class PluginSettingsConfigurationPanel {
     fun loadPasswords() {
         jiraPasswordField.text = CredentialService.jiraPassword
         jiraCertificatePasswordField.text = CredentialService.jiraCertificatePassword
-        svnPasswordField.text = CredentialService.svnPassword
     }
 
     fun savePasswords() {
         CredentialService.jiraPassword = String(jiraPasswordField.password)
         CredentialService.jiraCertificatePassword = String(jiraCertificatePasswordField.password)
-        CredentialService.svnPassword = String(svnPasswordField.password)
     }
 
     fun getPreferredFocusedComponent(): JComponent = jiraIssueCombo

@@ -1,6 +1,6 @@
 <idea-plugin>
-    <id>org.nemwiz.jira-commit-message</id>
-    <name>JIRA id SVN commit message</name>
+    <id>io.github.toshatikhonov.jira-svn-commit</id>
+    <name>JIRA SVN Commit</name>
     <vendor>toshaTikhonov</vendor>
 
     <depends>com.intellij.modules.platform</depends>
@@ -10,7 +10,7 @@
         <applicationService serviceImplementation="org.nemwiz.jiracommitmessage.configuration.PluginSettingsState"/>
 
         <applicationConfigurable groupId="tools"
-                             displayName="JIRA SVN Commit Message"
+                             displayName="JIRA SVN Commit"
                              id="preference.action.PluginActionConfiguration"
                              nonDefaultProject="true"
                              instance="org.nemwiz.jiracommitmessage.configuration.PluginSettingsConfiguration"/>
@@ -25,7 +25,7 @@
     <actions>
         <action id="action.PluginAction"
                 class="org.nemwiz.jiracommitmessage.action.PluginAction"
-                text="JIRA SVN Commit Message"
+                text="JIRA SVN Commit"
                 description="Insert JIRA issue id into an SVN commit message"
                 icon="/icons/frog.png">
             <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>

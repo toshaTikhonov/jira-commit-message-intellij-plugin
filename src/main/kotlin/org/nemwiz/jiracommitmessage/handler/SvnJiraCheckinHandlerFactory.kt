@@ -26,7 +26,7 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
 
             override fun beforeCheckin(): ReturnResult {
                 if (PluginSettingsState.instance.state.publishSvnRevisionToJira) {
-                    runCatching { SvnClient().headRevision() }
+                    runCatching { SvnClient(panel.project.basePath).headRevision() }
                         .onSuccess { beforeRevision = it }
                         .onFailure {
                             LOG.warn("Cannot read SVN revision before commit", it)
@@ -61,7 +61,7 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
 
                 ApplicationManager.getApplication().executeOnPooledThread {
                     runCatching {
-                        val svn = SvnClient()
+                        val svn = SvnClient(panel.project.basePath)
                         var revision = svn.findCommittedRevision(oldRevision, message, issueKey)
                         repeat(10) {
                             if (revision != null) return@repeat

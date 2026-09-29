@@ -75,5 +75,5 @@ class SvnClient {
         Regex("<" + name + ">([\\s\\S]*?)</" + name + ">").find(xml)?.groupValues?.get(1).orEmpty()
 
     private fun unescapeXml(value: String): String =
-        value.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\\"").replace("&amp;", "&")
+        value.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&amp;", "&")
 }

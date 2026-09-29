@@ -1,0 +1,12 @@
+JIRA SVN Commit
+
+This project is derived from jira-commit-message-intellij-plugin by nemwiz,
+licensed under the Apache License, Version 2.0.
+
+Original project:
+https://github.com/nemwiz/jira-commit-message-intellij-plugin
+
+The SVN/Jira integration and subsequent modifications are maintained by
+toshaTikhonov.
+
+See LICENSE for the full Apache License 2.0 text.

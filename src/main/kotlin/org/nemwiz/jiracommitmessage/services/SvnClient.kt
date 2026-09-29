@@ -1,5 +1,6 @@
 package org.nemwiz.jiracommitmessage.services
 
+import org.nemwiz.jiracommitmessage.configuration.PluginSettingsState
 import java.io.File
 
 data class SvnRevision(
@@ -83,11 +84,27 @@ class SvnClient(private val workingCopyPath: String? = null) {
 
             val revision = revisions.maxOfOrNull { it.first }
             if (revision != null) {
+                val committedPaths = revisions
+                    .filter { it.first == revision }
+                    .map { (_, path) ->
+                        val relativeUrl = runCatching {
+                            runSvnForTarget(path, "info", "--show-item", "relative-url")
+                                .trim()
+                                .removePrefix("^")
+                        }.getOrDefault("")
+                        "M" to relativeUrl.ifBlank { File(path).name }
+                    }
+
+                val author = runCatching {
+                    val target = revisions.first { it.first == revision }.second
+                    runSvnForTarget(target, "info", "--show-item", "last-changed-author").trim()
+                }.getOrDefault("")
+
                 return SvnRevision(
                     revision = revision,
-                    author = "",
+                    author = author,
                     message = commitMessage,
-                    paths = paths.map { "M" to it }
+                    paths = committedPaths
                 )
             }
 
@@ -109,18 +126,62 @@ class SvnClient(private val workingCopyPath: String? = null) {
     }
 
     fun jiraComment(revision: SvnRevision): String {
-        val repo = repositoryUrl().trimEnd('/')
-        val lines = mutableListOf(
-            "SVN revision r" + revision.revision,
-            "Репозиторий: " + repo,
-            "",
-            revision.message.ifBlank { "(без комментария)" },
-            "",
-            "Изменено файлов: " + revision.paths.size
-        )
-        revision.paths.take(30).forEach { (action, path) -> lines += action + " " + path }
+        val state = PluginSettingsState.instance.state
+        val repositoryRoot = runCatching {
+            runSvn("info", "--show-item", "repos-root-url").trim().trimEnd('/')
+        }.getOrDefault("")
+        val repositoryName = repositoryRoot.substringAfterLast('/').ifBlank { "SVN" }
+
+        // VisualSVN web UI normally lives on the same host as the repository URL.
+        // The working copy remains the source of truth; nothing environment-specific
+        // is stored in plugin defaults.
+        val visualSvnBase = runCatching {
+            val uri = java.net.URI(repositoryRoot)
+            uri.scheme + "://" + uri.authority
+        }.getOrDefault("")
+
+        fun visualRevisionUrl(): String =
+            if (visualSvnBase.isBlank()) "" else
+                visualSvnBase + "/!/#" + repositoryName + "/commit/r" + revision.revision + "/"
+
+        fun visualPathUrl(path: String): String =
+            if (visualSvnBase.isBlank()) "" else
+                visualSvnBase + "/!/#" + repositoryName + "/view/r" + revision.revision + "/" +
+                    path.trimStart('/').substringAfter(repositoryName + "/", path.trimStart('/'))
+
+        fun jiraIssueLink(message: String): String {
+            val issue = Regex("[A-Z][A-Z0-9]+-\\d+").find(message)?.value ?: return message
+            val jiraBase = state.jiraBaseUrl.trimEnd('/')
+            if (jiraBase.isBlank()) return message
+            return message.replaceFirst(
+                issue,
+                "[" + issue + "|" + jiraBase + "/browse/" + issue + "]"
+            )
+        }
+
+        val revisionUrl = visualRevisionUrl()
+        val lines = mutableListOf<String>()
+        lines += if (revisionUrl.isBlank()) {
+            "SVN revision r" + revision.revision
+        } else {
+            "[SVN revision r" + revision.revision + "|" + revisionUrl + "]"
+        }
+        lines += "Репозиторий: " + repositoryName
+        if (revision.author.isNotBlank()) lines += "Автор: " + revision.author
+        lines += ""
+        lines += jiraIssueLink(revision.message.ifBlank { "(без комментария)" })
+        lines += ""
+        lines += "Изменено файлов: " + revision.paths.size
+        revision.paths.take(30).forEach { (action, path) ->
+            val url = visualPathUrl(path)
+            lines += if (url.isBlank()) {
+                action + " " + path
+            } else {
+                action + " [" + path + "|" + url + "]"
+            }
+        }
         if (revision.paths.size > 30) lines += "... и ещё " + (revision.paths.size - 30)
-        return lines.joinToString("\\n")
+        return lines.joinToString("\n")
     }
 
     private fun findSvnExecutable(): String {

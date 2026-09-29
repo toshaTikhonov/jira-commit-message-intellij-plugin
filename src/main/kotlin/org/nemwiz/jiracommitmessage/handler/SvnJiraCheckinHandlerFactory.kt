@@ -18,14 +18,25 @@ private val LOG = logger<SvnJiraCheckinHandlerFactory>()
 
 class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
     override fun createHandler(panel: CheckinProjectPanel, commitContext: CommitContext): CheckinHandler {
-        if (!panel.vcsIsAffected("svn")) return CheckinHandler.DUMMY
-
+        // This factory is loaded only when the bundled Subversion plugin is present.
+        // Do not use vcsIsAffected("svn") here: the VCS display/key name differs between
+        // IDE versions and caused the handler to be silently replaced with DUMMY.
         return object : CheckinHandler(), DumbAware {
             private var beforeRevision: Long? = null
 
             override fun beforeCheckin(): ReturnResult {
                 if (PluginSettingsState.instance.state.publishSvnRevisionToJira) {
-                    beforeRevision = runCatching { SvnClient().headRevision() }.getOrNull()
+                    runCatching { SvnClient().headRevision() }
+                        .onSuccess { beforeRevision = it }
+                        .onFailure {
+                            LOG.warn("Cannot read SVN revision before commit", it)
+                            PluginNotifier().showWarning(
+                                panel.project,
+                                "JIRA SVN Commit Message",
+                                "Не удалось определить SVN revision перед commit: " + (it.message ?: "unknown error"),
+                                null
+                            )
+                        }
                 }
                 return ReturnResult.COMMIT
             }
@@ -38,7 +49,15 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
                 val issueKey = panel.project.service<JiraCommitMessagePlugin>().extractIssueKey(message)
                     ?: state.jiraIssueKey.trim().takeIf { it.isNotEmpty() }
                     ?: return
-                val oldRevision = beforeRevision ?: return
+                val oldRevision = beforeRevision ?: run {
+                    PluginNotifier().showWarning(
+                        panel.project,
+                        "JIRA SVN Commit Message",
+                        "SVN commit выполнен, но исходная revision не была определена — публикация в Jira пропущена.",
+                        null
+                    )
+                    return
+                }
 
                 ApplicationManager.getApplication().executeOnPooledThread {
                     runCatching {
@@ -51,6 +70,11 @@ class SvnJiraCheckinHandlerFactory : CheckinHandlerFactory() {
                         }
                         val committed = revision ?: error("SVN revision not found after successful commit")
                         JiraClient().addComment(issueKey, svn.jiraComment(committed))
+                        PluginNotifier().showInfo(
+                            panel.project,
+                            "JIRA SVN Commit Message",
+                            "SVN revision r" + committed.revision + " опубликована в " + issueKey
+                        )
                     }.onFailure {
                         LOG.warn("Cannot publish SVN revision to Jira", it)
                         PluginNotifier().showWarning(

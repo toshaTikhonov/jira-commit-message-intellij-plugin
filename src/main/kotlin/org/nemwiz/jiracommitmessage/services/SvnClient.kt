@@ -10,7 +10,7 @@ data class SvnRevision(
     val paths: List<Pair<String, String>>
 )
 
-class SvnClient {
+class SvnClient(private val workingCopyPath: String? = null) {
     private val state get() = PluginSettingsState.instance.state
 
     fun findCommittedRevision(previousRevision: Long, expectedMessage: String, issueKey: String): SvnRevision? {
@@ -58,7 +58,7 @@ class SvnClient {
     }
 
     fun jiraComment(revision: SvnRevision): String {
-        val repo = state.svnRepositoryUrl.trimEnd('/')
+        val repo = repositoryUrl().trimEnd('/')
         val revisionUrl = repo + "/?p=" + revision.revision
         val lines = mutableListOf(
             "[SVN revision r" + revision.revision + "|" + revisionUrl + "]",
@@ -97,10 +97,27 @@ class SvnClient {
             )
     }
 
+    fun repositoryUrl(): String {
+        val xml = runSvn("info", "--xml")
+        return Regex("<url>([\\s\\S]*?)</url>")
+            .find(xml)
+            ?.groupValues
+            ?.get(1)
+            ?.let(::unescapeXml)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: error("Cannot determine SVN repository URL from working copy")
+    }
+
+    private fun svnTarget(): String =
+        workingCopyPath?.takeIf { it.isNotBlank() }
+            ?: state.svnRepositoryUrl.takeIf { it.isNotBlank() }
+            ?: error("SVN working copy is not available and fallback repository URL is not configured")
+
     private fun runSvn(vararg args: String): String {
         val command = mutableListOf(findSvnExecutable())
         command += args
-        command += state.svnRepositoryUrl
+        command += svnTarget()
         command += "--non-interactive"
         if (state.svnUsername.isNotBlank()) command += listOf("--username", state.svnUsername)
         if (CredentialService.svnPassword.isNotBlank()) command += listOf("--password", CredentialService.svnPassword)

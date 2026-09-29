@@ -87,19 +87,21 @@ class SvnClient(private val workingCopyPath: String? = null) {
         // VisualSVN web UI normally lives on the same host as the repository URL.
         // The working copy remains the source of truth; nothing environment-specific
         // is stored in plugin defaults.
-        val visualSvnBase = runCatching {
-            val uri = java.net.URI(repositoryRoot)
-            uri.scheme + "://" + uri.authority
-        }.getOrDefault("")
+        val visualSvnBase = state.visualSvnWebUrl.trim().trimEnd('/').ifBlank {
+            runCatching {
+                val uri = java.net.URI(repositoryRoot)
+                uri.scheme + "://" + uri.authority
+            }.getOrDefault("")
+        }
 
         fun visualRevisionUrl(): String =
             if (visualSvnBase.isBlank()) "" else
                 visualSvnBase + "/!/#" + repositoryName + "/commit/r" + revision.revision + "/"
 
-        fun visualPathUrl(path: String): String =
-            if (visualSvnBase.isBlank()) "" else
-                visualSvnBase + "/!/#" + repositoryName + "/view/r" + revision.revision + "/" +
-                    path.trimStart('/').substringAfter(repositoryName + "/", path.trimStart('/'))
+        // VisualSVN's stable pathrevision URL opens the file contents, not its diff.
+        // Commit Details is the stable page that contains the changed-path list and
+        // opens the inline diff for a modified file, so changed files link there.
+        fun visualPathUrl(): String = visualRevisionUrl()
 
         fun jiraIssueLink(message: String): String {
             val issue = Regex("[A-Z][A-Z0-9]+-\\d+").find(message)?.value ?: return message
@@ -125,7 +127,7 @@ class SvnClient(private val workingCopyPath: String? = null) {
         lines += ""
         lines += "Изменено файлов: " + revision.paths.size
         revision.paths.take(30).forEach { (action, path) ->
-            val url = visualPathUrl(path)
+            val url = visualPathUrl()
             lines += if (url.isBlank()) {
                 action + " " + path
             } else {

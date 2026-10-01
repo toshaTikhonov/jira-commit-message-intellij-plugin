@@ -87,12 +87,14 @@ class SvnClient(private val workingCopyPath: String? = null) {
         // VisualSVN web UI normally lives on the same host as the repository URL.
         // The working copy remains the source of truth; nothing environment-specific
         // is stored in plugin defaults.
-        val visualSvnBase = state.visualSvnWebUrl.trim().trimEnd('/').ifBlank {
-            runCatching {
-                val uri = java.net.URI(repositoryRoot)
-                uri.scheme + "://" + uri.authority
-            }.getOrDefault("")
-        }
+        val visualSvnBase = normalizeHttpUrl(
+            state.visualSvnWebUrl.trim().trimEnd('/').ifBlank {
+                runCatching {
+                    val uri = java.net.URI(repositoryRoot)
+                    uri.scheme + "://" + uri.authority
+                }.getOrDefault("")
+            }
+        )
 
         fun visualRevisionUrl(): String =
             if (visualSvnBase.isBlank()) "" else
@@ -137,6 +139,11 @@ class SvnClient(private val workingCopyPath: String? = null) {
         if (revision.paths.size > 30) lines += "... и ещё " + (revision.paths.size - 30)
         return lines.joinToString("\n")
     }
+
+    private fun normalizeHttpUrl(value: String): String =
+        value
+            .replace(Regex("^https:/+(?!/)"), "https://")
+            .replace(Regex("^http:/+(?!/)"), "http://")
 
     private fun findSvnExecutable(): String {
         val pathCandidates = System.getenv("PATH")
